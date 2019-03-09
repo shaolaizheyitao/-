@@ -127,7 +127,25 @@ shell
 		
 		[[ $str1 = $str2 ]]  比较两个字符串是否相等
 	
+		[[ -z $str ]]		 如果str是空字符串  ，则返回真
+		[[ -n $str ]]		 如果str是非空字符串，则返回真
 	
+		使用逻辑运算符 && 和 || 可以将多个条件组合起来，例如
+		
+		if [[ -n $str1 ]] && [[ -z $str2 ]];
+		then
+			echo " "
+		fi
+	
+		
+	test命令也可以用来执行条件检测，用test可避免使用过多【】方括号的问题
+	【】中的测试条件同样可以通过test来完成
+	
+		if [[ $var -eq 0 ]];then echo "True";fi
+		
+		等价于
+		
+		if test $var -eq 0;then echo "true";fi
 	
 	
 	
