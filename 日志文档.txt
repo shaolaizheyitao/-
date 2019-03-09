@@ -1,0 +1,185 @@
+ubuntu password : root123 
+
+samba 
+	先在ubuntu中\home目录下创建一个文件例如share，然后修改共享属性全部勾选
+	在终端输入 ifconfig 查看ip地址
+	在windows计算机下输入（）映射） \\ip地址\共享文件夹的名称
+
+git 
+	创建分支 git checkout -b 分支名称iss53
+		此时这条命令相当于执行 
+			git branch iss53
+			git checkout iss53
+
+	合并分支 git merge 分支名称
+	
+
+	合并时，先使用git checkout 分支名称，切换到想要的分支
+	在合并出现冲突的时候，====================隔开的上半部分是 之前切换的当前分支
+	而============================隔开的下半部分是Git merge 的分支
+
+	删除分支 git branch -d 分支名称
+
+	
+	git log --graph 命令可以看到分支合并图
+
+	
+	版本回退    git reset --hard 版本号的前7位就可以了
+
+	
+	git log > /目录文件（例如 ../a.log）  就会将版本信息输出到当前目录的上一个目录的a.log文件中
+
+	
+	git diff filename 查看尚未暂存的某个文件更新了哪些  （工作区和暂存区）
+
+	git diff -cached filename 查看已经暂存起来的某个文件和上次提交的版本之间的差异（暂存区和版本区）
+	
+	git diff 版本号 版本号  查看两个版本号之间的差异
+
+	git diff 版本号：filename  版本号：filename  查看两个版本号的某个文件之间的差异			  
+	git diff 版本号 版本号 --name-only |xargs zip update.zip
+  	此时就能将两个不同版本号之间的差异文件进行打包
+	xargs是linux的一个命令    能够将上一个命令的输出转换为下一个命令的参数
+
+
+	git clean -xf   删除工作区中的新加的但是尚未追踪的文件
+
+
+	git status  查看当前的状态
+	git status -s  可以以简短的方式查看当前的状态
+
+	git reset HEAD "文件名"   可以将已经提交到暂存区的文件 回退，撤回 
+
+	git tag -a v1.0  比如我们想为一个项目发布 1.0 版本，那么可以使用
+			git tag 命令，执行之后 Git会打开编译器让我们输入注解信息
+
+	然后使用  git log --decorate 可以看到我们的标签
+	
+	当我们想给之前提交的版本追加标签，可以使用
+	git tag -a v0.9 版本号
+
+	git tag  查看已有的标签
+
+	git tag -d 标签号   删除一个标签
+
+	git show  标签  查看这个标签的版本信息
+
+
+	github 与 本地git关联
+	本地配置用户名和邮箱
+	git config --global user.name "你的用户名"
+	git config --global user.email "你的邮箱"
+	
+	生成ssh key
+	运行 ssh-keygen -t rsa -C "你的邮箱"
+	然后输入三次回车
+	将生成的ssh key复制到剪切板，执行 clip <~/.ssh/id_rsa.pub    (ssh key大概被放在c盘的用户目录下)
+
+	打开github，进入settings
+	然后add ssh key
+	
+	最后执行 ssh -T git@github.com
+
+
+	先在github 官网setting一个仓库respository
+	然后将该仓库的ssh或者http的密匙 一般我们用ssh，因为http太慢复制到剪切板
+	ssh密匙一般是git@github.com开头的
+	然后运行git remote add origin 你复制的地址
+
+	如果我们在创建repository的时候，接入README.md或者LICENSE，那么github会拒绝我们的push，所以我们需要先执行 git pull origin master 
+
+	在这里我们遇到了一个警告 
+	警告的大概意思就是：警告：为IP地址13.229.188.59的主机（RSA连接的）持久添加到hosts文件中，那就来添加吧！
+	
+	解决方法：
+	linux环境     打开 vim /etc/hosts    然后添加一行 :  13.229.188.59  github.com
+	windows环境   打开 C:\\Windows\System32\drivers\etc\hosts   然后添加一行：13.229.188.59 github.com	
+
+
+	然后这里还有一个错误
+	fatal: Couldn't find remote ref master 
+	翻译过来就是：致命的：无法找到远程参考主，也就是报错的意思。
+	错误的提示内容意思是找不到需要连接的对象。
+	如果是新建的仓库（ repositories ）的话在pull代码的时候，
+	出现这个提示，可以忽略不计，直接提交就可以。
+
+
+	
+
+	再然后我们要执行 git push -u origin master （和上一条命令不一样） 将本地仓库上传至Github的仓库并进行关联
+	然后我们以后想在commit后同步到github上面，只需要执行 git push  就行了
+	
+	
+	获取他人的远程仓库，首先要进入别人的仓库获取该仓库的ssh地址
+	然后通过命令
+	git clone 复制的ssh地址
+	这样直接clone别人的仓库后，我们不能够push自己修改的代码上去别人的仓库
+
+	
+	git branch -a 可以看到所有的分支，包括远程分支
+	根据远程分支，我们可以创建爱你一个新的本地dev，
+	并将该项目的dev分支的内容放到我们新创建的本地dev分支
+	命令 git checkout -b dev origin/dev  
+	这个命令的意思是，创建一个dev分支并且把远程的dev分支的内容
+	放到本地的dev分支中   origin/dev 是远程的dev分支
+
+
+
+	和团队项目保持同步
+	1、先查看有没有设置upstream，使用git remote -v 命令来查看
+	     如果没有显示upstream，则使用git remote add upstream 团队项目的地址  命令
+	     接着再次使用git remote -v 来进行查看，显示出upstream就设置好了
+	
+	2、开始同步  。首先执行   git fetch upstream 来获取团队项目的最新版本
+	
+	然后进行分支合并   执行 git merge upstream/dev  命令
+	
+         就会将 团队上的最新版本的分支   upstream/dev   合并到当前分支 dev  
+
+
+	合并好之后，我们想要发布，就 git push命令
+	然后进入到我们自己的github里面的fork仓库， 点击Pull request
+	然后左边框 表示要合并到 的项目的dev分支 ，右边框是表示要从自己仓库的dev分支发起合并请求
+
+
+	然后点击 Create pull request就可以发送合并请求了
+
+
+
+
+
+
+
+
+
+	.data区存储已经初始化的全局C变量，.bss区存储没有初始化的全局C变量
+	所以.data区和.bss区被统一称为全局区
+	编译器会为每个static变量在.data或者.bss中分配内存空间
+
+
+
+
+	将源文件编译后生成的.o是可重定位的目标程序 ，然后将这些.o文件链接起来生成的是可执行目标程序
+
+
+	变参函数
+		
+		处理变参函数的3个方法
+		va_start  va_end va_arg
+	他们的函数原型如下：
+		void va_start(va_list valist,int num)
+		void va_end(va_list valist)
+		type va_arg(va_list,type)     
+	我们一般把  va_arg 这个函数放在一个for循环里面,
+	每次调用迭代出一个可变参数值（就是按照调用的次数输出对应的参数位置的值）
+	
+	特殊情况下，如有需要可以再次循环重新取出变量的值
+	调用情况如下	
+		首先需要再次调用va_start函数，然后再次在循环中遍历取值，最后va_end 释放
+
+
+
+
+win7切换任务快捷键 按win+tab ，		
+
+在ubuntu下  当我们复制了一段文字后，通过点击鼠标滑轮键直接粘贴

@@ -1,0 +1,61 @@
+函数指针：
+	函数指针就是一个指向函数的指针，而函数名本身就是该函数的地址
+	在定义函数指针之前，我们通常需要定义这个函数
+例如 ： int max(int a,int b)       	这就是函数的定义
+        int （*function）(int ,int)	这是函数指针的声明
+	然后，我们可以对函数指针进行赋值
+	function = max
+	最后，我们通过函数指针来访问函数，通过对函数指针的解引用来替代函数名
+	如： （*function）（a,b）
+
+	但是在C++中我们可以直接使用函数指针来替代函数名
+	如：function（a,b）
+	但是我们还是建议使用前者，因为比较直观和易懂
+
+
+
+回调函数：
+	首先，函数指针可以作为其他函数的参数，回调函数就是其他函数通过函数指针调用的那个函数
+	例如：int random(void)
+		{   return 5;   }
+	      void init ((int)(*function)(void))
+		{               }
+	在main函数里面我们这样写：
+		int main()
+		{  
+			(int)(*function)(void)  = random	
+			init(function)
+		} 
+	此时，我们定义的这个function函数指针变量就被赋予random这个函数的指针
+	也就是这个function指向了random这个函数
+	所以当我们在main函数里面的init函数传入function时，就相当于传入了random这个函数的地址
+
+
+
+
+
+#define CopySDMMCtoMem(z,a,b,c,e)(((bool(*)(int, unsigned int, unsigned short, unsigned int*, bool))(*((unsigned
+
+int *)0xD0037F98)))(z,a,b,c,e))
+--------------------- 
+
+typedef u32(*copy_sd_mmc_to_mem) (u32 channel, u32 start_block, u16 block_size, u32 *trg, u32 init);
+
+
+    (*(（void(*)()）0x30008000))()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
