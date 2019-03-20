@@ -1,0 +1,225 @@
+1、AHC_MemoryMonitor 函数
+
+MEMORY_MONITOR_MAX_NUM = 8；
+定义了一个静态的ubmenseg数组   大小是上面那个
+
+然后  main传进来的参数为AHC-TRUE ， ubMemMonitorInitFlag  为false，转而执行else
+
+
+
+ 
+else里面定义了一个结构体数组  attr  大小为上面那个宏定义 8 的
+结构体如下
+
+typedef struct _MMPF_MONITOR_SEQ_ATTR {
+    MMP_ULONG   ulAddrLowBD;  // Low bound address of segment
+    MMP_ULONG   ulAddrUpBD;   // Up bound address of segment
+    MMP_ULONG   ulWrAllowSrc; // Bitmap of source allowed to write this segment
+    MMP_ULONG   ulRdAllowSrc; // Bitmap of source allowed to read this segment
+} MMPF_MONITOR_SEQ_ATTR;
+
+接着把那个标志  ubMemMonitorInitFlag  设置为  AHC-TRUE   ，大概是内存监视器初始化标志
+然后又把刚才设置的  结构体数组  清0
+
+然后 调用  AIHC_MemoryMonitorSetPara  函数， 这个函数的作用就是 对这个 attr 数组中的 第2个元素  attr[1] 设置了参数
+
+
+回到else中后      进入  MMPF_Monitor_Init 函数     发现这个函数 找不到函数体，并没有什么屌用  ，说是说 初始化 monitor
+
+接着 进入 for 循环 将结构体数组中的    ulAddrLowBD    ulAddrUpBD   其中一个不为 0 的 结构体元素   ，，这个for循环说是 使能monior ，其实并没有用
+
+			ubMemSeg[i] = MMPF_Monitor_Enable(&attr[i], AIHC_MemMonitor_Callback);   //  MMPF_Monitor_Enable 和 AIHC_MemMonitor_Callback 这个函数只找到声明，没有定义
+			然后进行打印  
+
+
+2、AHC_SWPACK_TaskInit
+	从第一步结束 回到第二步  AHC_SWPACK_TaskInit  函数
+	AIT_LENS_TYPE != AIT_LENS_TYPE_DUMMY      这个判断是相等的   ，所以不进行#if 的操作
+接下来
+
+typedef struct {
+    UINT32   pbos;           // lower address
+    UINT32   ptos;           // higer address
+	UINT8    ubPriority;
+} AHC_OS_TASK_CFG;
+
+对上面的这个结构体进行  赋值
+	设置优先级 为  34    和  堆栈 的地址    低地址是下面这个数组 UINT32  MotorCtrlStack 的低地址
+		堆栈的大小是  	TASK_MOTOR_STK_SIZE * uint
+						即   2048 * 4  = 8192 个字节
+UINT32  MotorCtrlStack[TASK_MOTOR_STK_SIZE];	
+	
+	
+TASK_WIFI_INTERNAL_PRIO_START (37)
+TASK_WIFI_INTERNAL_PRIO_END (52)
+
+
+这是一个任务创建函数    第一个参数是  任务函数名  KeyPadTask  	第二个参数是 任务的堆栈和优先级 结构体     第三个参数是传递给 任务函数的参数
+AHC_OS_TASKID AHC_OS_CreateTask(void (*taskproc)(void *param), AHC_OS_TASK_CFG *task_cfg, void *param)
+这个任务创建函数里面调用的是  MMPF_OS_TASKID      MMPF_OS_CreateTask(void (*taskproc)(void *param), MMPF_TASK_CFG *task_cfg, void *param);
+它在 Os_wrap.h  里面
+
+
+任务创建完成之后  进入 AHC_OS_SetTaskName(task_cfg.ubPriority, (UINT8 *)"KeyPad"); 函数
+意思应该是设置名字之类的 函数原型如下 ： MMP_UBYTE  MMPF_OS_SetTaskName(MMP_UBYTE ubNewPriority, MMP_UBYTE *pTaskName);
+执行成功返回 AHC_TRUE   失败  打印错误信息 并返回 AHC_FALSE
+
+
+接下来   #if (KEYPAD_DETECT_METHOD == KEYPAD_DETECT_TASK)   这个判断成立 ，继续执行 
+创建一个  RealIDKeyPadTask  这样一个任务  
+	优先级是 35 ， 堆栈大小也是  2048 *4 = 8196 字节     参数是  RealIDKeyPad 字符串   应该是设置 任务名字的东西
+
+创建一个  AhcWorkTask  任务，优先级是55   堆栈大小为 512 * 4 = 2048 个字节
+	
+创建一个  AhcWorkJobTask  任务，优先级是56   堆栈大小为 512 * 4 = 2048 个字节
+
+创建一个  UARTCtrl_TaskHandler 任务，优先级是37    堆栈大小也是  2048 *4 = 8196 字节
+
+创建一个  CyclicJobTaskHandler 任务，优先级是23    堆栈大小也是  256 *4 = 1024 字节
+
+
+TASK_SYS_PRIO               (1)				TASK_USBH_BULKIN_PRIO       (8)
+
+TASK_USBH_POSTPROCESS_PRIO  (9)				TASK_HIGH_WORK_PRIO         (11)
+
+TASK_AUDIO_STREAM_PRIO      (14)
+
+TASK_VIDDEC_PRIO            (15)			TASK_3GPPARSR_PRIO          (16)
+
+TASK_AUDIO_PLAY_PRIO        (17)			TASK_VIDPLAY_PRIO           (18)
+
+TASK_SENSOR_PRIO            (19)
+
+TASK_AUDIO_RECORD_PRIO      (21)			TASK_USB_PRIO               (22)
+
+TASK_CYCLIC_JOB_PRIO        (23)			TASK_FS_PRIO                (24)
+
+TASK_H264WIFICB_PRIO        (29)
+
+TASK_AHC_INIT_PRIO          (32)     和  	TASK_UART_BRUST_PRIO  (32) 一个优先级
+
+TASK_UART_BRUST_PRIO        (33)       	 	TASK_KEYPAD_PRIO      	(34)
+
+TASK_REALIDKEYPAD_PRIO		(35)			TASK_MOTOR_CTRL_PRIO  	(36)
+
+TASK_UART_CTRL_PRIO			(37)			DCF_DB_MUTEX_PRIO	  	(37)
+
+DCF_CYCLIC_MUTEX_PRIO       (37)			TASK_AHC_DCF_PRIO	   	(37)
+
+TASK_NETWORK_PRIO			(53)			TASK_AHC_PRIO			(54)
+
+TASK_AHC_WORK_PRIO			(55)			TASK_AHC_WORK2_PRIO		(56)
+
+TASK_WIFI_INTERNAL_PRIO_START (37)			TASK_WIFI_INTERNAL_PRIO_END (52)
+
+TASK_LAST_PRIO				(61)			OS_LOWEST_PRIO          (63)
+
+
+2、AHC_Main_Task   
+
+	运行完 AHC_SWPACK_TaskInit 之后 ，继续此函数的内容
+	首先创建一个信号量  ahc_System_Ready  ，设置时为0
+	
+	然后进入  APK_USBSwitchDetection  函数  ，功能应该是 USB开关检测
+			然后这个函数 调用了三个函数   MMPF_PIO_EnableOutputMode 输出使能   AHC_GPIO_ConfigPad   AHC_GPIO_SetData 设置高电平
+	
+	然后进入  AHC_USBDetectHandler	  函数  ，
+			然后这个定义 UVC_HOST_VIDEO_ENABLE 是 1 ，  接着进行一系列的函数处理 ，
+							一旦某个元素出错，立即AHC_PRINT_RET_ERROR(gbAhcDbgBrk,0);打印错误信息
+							
+	然后进入  AHC_Initialize 函数   ，  这个函数里面调用了很多其他函数  ，例如
+			打印程序编译时间     打印版本信息 和 板子类型等等    
+			然后 这个函数比较重要吧  AIHC_PARAM_Initialize（）  里面是很多参数的设置
+			接着是   AIHC_InitGeneralFunc  函数
+					里面是结构体数组 0x80  个  进行清零    m_MessageQueue
+				typedef struct _AHC_QUEUE_MESSAGE 
+				{
+					UINT32 ulMsgID; 
+					UINT32 ulParam1;
+					UINT32 ulParam2;
+				} AHC_QUEUE_MESSAGE;
+	
+			再接下来是  AIHC_InitAHLMessage  函数
+					这个函数  创建了一个信号量且初始化为1   m_AHLMessageSemID   
+					然后它还创建了一个消息队列   AHC_MSG_QId      大小也是为 0x80
+			接着进入了  AIHC_InitAHLMessage_HP 函数
+				里面创建了一个信号量为 m_AHLHPMessageCountSemID   ，大小是 8 
+					创建了一个信号量为m_AHLHPMessageSemID         ，大小是 1 
+					还创建了一个消息队列  AHC_HP_MSG_QId          ，大小是 8
+			接着进入  AHC_WMSG_Config  函数	应该是警告信息之类的	，里面设置了一个信号量  m_WMSGSemID  大小为 1 
+					在里面是对 一个结构体进行参数设置 ，结构体如下
+					typedef struct _AHC_WMSG_CFG {
+						UINT16 DisplayID;
+						UINT32 StartX;
+						UINT32 StartY;
+						UINT32 DisplayWidth;
+						UINT32 DisplayHeight;
+						UINT32 byBkColor;
+						UINT32 byBoundColor;
+					} AHC_WMSG_CFG;
+
+			接着进入到 MMPS_VIDPLAY_InitConfig 函数 ，它应该是视频播放器的参数配置
+					他的参数 是  系统的视频 解码器的指针   ，即一个结构体的指针
+
+			然后将  m_bAHCGeneralInit 设置为 1.表示初始化过了  AHC_Initialize   这个函数
+			然后是 AHC_CheckCallbackExisted 这个函数  ，里面是空的。
+			
+	然后进入到了   AHC_WaitForBootComplete	函数， 这个函数等待两个参数为 true ，才结束，否则一直等待	
+				两个参数是  glAhcBootComplete   gbSysBootComplete
+			
+	然后进入到了   uiCheckDefaultMenuExist  函数，用于检查默认的菜单UI 是否存在  ，他会打印函数的名字
+				useMenu 会保存 用户的菜单设置结构体指针     defMenu  会保存 默认的菜单设置结构体指针
+				接着进入 AHC_PARAM_Menu_Read 函数，这个函数是 将一个txt文件的内容 配置给 default menu
+				上面这一步配置好之后  进入 AHC_PARAM_Menu_Read  函数 ，这次是从用户配置txt里面 给用户菜单配置内容
+				
+				ApplyUserTextSetting("SD:0:\\usercfg.txt", useMenu);
+				CheckMenuSetting(useMenu);
+				Menu_Setting_BackupMenuAtoms();
+				MenuItemDateTimeFormatToAhcTimeStampSetting
+				LDWS_CalibrationParam_UserUpdate();
+				LDWS_CalibrationParam_Read();
+
+	设置  gCurMenuInfo.uiMediaSelect = MEDIA_SETTING_SD_CARD
+	
+	进入  MMPS_IrDA_Initialize  函数  ，可能是红外初始化
+	进入  MMPS_IrDA_SetIrEn     函数  ，使能红外
+	
+	进入  Menu_SetVolume        函数  ，设置音量
+	进入  AHC_SetMenuFlashLEDStatus  函数，设置LED闪烁
+	
+	support GPS ，所以
+	进入  AHC_OS_SetFlags()  函数  设置  GPS_FLAG_INITIAL 为  set状态（相对于clear）
+	进入  LedCtrl_PowerLed() 函数  设置   电源灯 为 亮
+	
+	进入  AHC_PowerOn_Welcome() 函数，它里面主要就是调用了  AHC_PlaySoundEffect 函数时
+			然而  AHC_PlaySoundEffect  这个函数特别庞大   
+	
+	进入  AHC_OS_ReleaseSem函数 ，释放信号量   ahc_System_Ready  
+	
+	随后进入   AHC_UartRegisterUartCmdList(sAhcUartCommand); 函数
+	
+	中间隔着一系列没有作用的  #ifdef  #endif
+	来到了第1025行 
+	经过判断  进入 pf_RearCamType_EnSet   函数     ，参数是  MMP_GetUSBCamType  值为  3 
+	
+	进入 uiStateSystemStart  函数，里面是  AHC_SendAHLMessage(AHLM_UI_NOTIFICATION, 0, 0); 发送 一个 AHL message
+	
+	进入 AHC_PreSetLCDDirection  函数
+	
+	进入 AHC_VIDEO_SetMovieConfig(0, AHC_CLIP_CONTAINER_TYPE     , AHC_MOVIE_CONTAINER_3GP);
+			这个函数是用来设置  movie  的配置参数  ，并且设置了  record  和  playback 回放   的文件
+			经过判断  ，这个函数进入到第一个  switch  ，经过对比查找   ，来到  第 1070 行    AHC_CLIP_CONTAINER_TYPE
+			然后经过判断 执行     m_sMovieConfig.ContainerType = VIDMGR_CONTAINER_3GP;  
+			
+	进入 AHC_WD_Enable(AHC_TRUE);   这个函数是看门狗使能
+	
+	接着执行下面四个函数
+	MMPS_Sensor_StartSpeechRecog(0,MMP_TRUE);     //语音识别
+	MMPS_AUDIO_InitLiveRecord(MMP_AUDIO_PCM_ENCODE, 0, 16000, (MMP_LivePCMCB)SpeechPCMTransferCB);      //实时音频记录初始化
+	MMPS_LiveAudio_StartRecord();                 //开启实时音频记录
+	MMPS_StartSpeechRecog((MMP_SpeechRecogCbFunc)SpeechRecogRunCB);           //开启语音识别
+	
+	
+	
+	
+
