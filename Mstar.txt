@@ -1,0 +1,98 @@
+config_SDK.h
+查看本工程使用哪个文件配置，并将其他无关的移除本工程，而不是删除
+然后还要将所有打开的文件关闭 快捷键 ctrl+shft+w  ，然后再进行定位就不会定位到上面已经移除的文件了
+
+uiCheckDefaultMenuExist  这个函数将txt文本的菜单设置全部导入到 usermenu 还有 defmenu
+
+
+在AHC_Menu.c 里面的 uiPowerOffPicture 里面的AHC_PowerOff_ShowPicture("SF:0:\\goodbye.jpg")
+
+AHC_PowerOff_ShowPicture("SF:0:\\black.jpg")
+关背光
+在PMUCtrl_Power_Off  中  的 AHC_Gsensor_SetPowerOnIntThreshold函数回去调节gsensor的灵敏度
+还有设置gsensor唤醒 PMU
+
+
+vedio状态初始化  设置 指示灯  lcd屏幕  是否旋转等等 背光  还有当前的系统状态是vedio模式
+
+
+while循环里面会 先 调用    uiStateProcessGlobalEvent( ulMsgId, &ulEvent, &ulParam ) 
+							uiStateProcessGlobalEvent2( ulMsgId, &ulEvent, &ulParam )
+这两个函数 ，然后再去调用 
+			StateModeDoHandler(uiSysState.CurrentState, ulMsgId, ulEvent, ulParam);
+	它会把当前的系统状态  设置为   系统的工作状态 
+ 然后通过函数指针  调用   系统当前状态所绑定的   状态handle处理函数
+
+KeyParser_VideoRecEvent这个函数根据他的传入参数  
+返回的应该是事件触发所对应的 处理函数的  函数指针
+
+StateSelectFuncVideoRecordMode 这个函数 将状态   中所有的事件 跟 它事件所对应的函数就行绑定
+RegisterEventCb(EVENT_EV_INCREASE,				STATE_VIDEO_REC_MODE_EVENT_EV_INCREASE_LCD);
+
+上面的这个函数又会被  StateSelectFunc  这个函数所调用 
+
+上面的函数  又会被  StateSwitchMode  这个函数所调用
+
+AHC_HP_MSG_QId
+
+菜单模式的话，它的触发事件处理
+会通过 MenuButtonToMenuOp(ulEvent, ulParam); 
+这个函数会通过传入的参数获取菜单所对应事件的
+菜单操作函数指针
+然后在MenuStateExecutionCommon这个函数里面
+获取当前菜单，并通过每个菜单所对应的菜单事件处理函数
+传入菜单操作函数指针进行相应处理
+pCurrMenu->pfEventHandler( pCurrMenu, ulEvent, ulPosition );
+
+所有的模式的菜单定义在  MenuStateMisc.c 的第99 行
+
+
+在uistate。。。那里绑定每个状态对应的初始化、shutdown、handle函数那里
+那些vedio、playback菜单模式也是其中的状态之一
+在切换到这些菜单状态模式时，会执行它们的初始化函数
+那么里面就会有下面的这个函数去设置当前的菜单ID、菜单事件处理函数等等
+SetCurrentMenu(&sMainMenuPlayback);
+那么这个函数会将当前的菜单指针指向  当前状态所对应的主菜单结构体如sMainMenuPlayback
+然后  
+	MenuStateExecutionCommon  函数
+	就会将当前菜单的菜单事件处理函数根据具体的菜单事件进行处理
+
+
+
+
+
+ //Set ADAS parameter
+    {
+        UINT32 bLDWS_En = LDWS_EN_OFF;
+        UINT32 bFCWS_En = FCWS_EN_OFF;
+        UINT32 bSAG_En  = SAG_EN_OFF;
+        UINT32 uiAdasFlag = 0;
+        
+        if ( AHC_Menu_SettingGetCB( (char *)COMMON_KEY_LDWS_EN, &bLDWS_En ) == AHC_TRUE ) {
+            if (bLDWS_En == LDWS_EN_ON ) {
+                uiAdasFlag |= AHC_ADAS_ENABLED_LDWS;
+            }
+        }
+
+        if ( AHC_Menu_SettingGetCB( (char *)COMMON_KEY_FCWS_EN, &bFCWS_En ) == AHC_TRUE ) {
+            if (bFCWS_En == FCWS_EN_ON ) {
+                uiAdasFlag |= AHC_ADAS_ENABLED_FCWS;
+            }
+        }
+
+        if ( AHC_Menu_SettingGetCB( (char *)COMMON_KEY_SAG_EN, &bSAG_En ) == AHC_TRUE ) {
+            if (bSAG_En == SAG_EN_ON ) {
+                uiAdasFlag |= AHC_ADAS_ENABLED_SAG;
+            }
+        }
+        
+        AHC_SetParam( PARAM_ID_ADAS, uiAdasFlag );
+    }
+
+
+
+m_StateOP
+m_PBStateOP
+
+m_OSD[id]->gui.gui_pfont
+
