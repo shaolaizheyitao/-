@@ -12,6 +12,12 @@ AHC_PowerOff_ShowPicture("SF:0:\\black.jpg")
 在PMUCtrl_Power_Off  中  的 AHC_Gsensor_SetPowerOnIntThreshold函数回去调节gsensor的灵敏度
 还有设置gsensor唤醒 PMU
 
+设置时间水印在DrawStateVideoFun.c   里面的 Drawvideo_TimeStamp
+
+修改开机logo在 DrawStateVideoFunc.c里面 的 DrawPowerOn_Welcome
+AHC_OSDDrawBitmap(bID0, &BMICON_WELCOME_HP, recRECT.uiLeft, recRECT.uiTop);//draw 16bit bmp will hangup.
+它是由 main_task 的  AHC_PowerOn_Welcome 函数  调用
+
 
 vedio状态初始化  设置 指示灯  lcd屏幕  是否旋转等等 背光  还有当前的系统状态是vedio模式
 
@@ -34,6 +40,14 @@ RegisterEventCb(EVENT_EV_INCREASE,				STATE_VIDEO_REC_MODE_EVENT_EV_INCREASE_LCD
 上面的函数  又会被  StateSwitchMode  这个函数所调用
 
 AHC_HP_MSG_QId
+
+
+
+
+
+
+
+drv_gpio.h
 
 菜单模式的话，它的触发事件处理
 会通过 MenuButtonToMenuOp(ulEvent, ulParam); 
@@ -58,41 +72,222 @@ SetCurrentMenu(&sMainMenuPlayback);
 	就会将当前菜单的菜单事件处理函数根据具体的菜单事件进行处理
 
 
-
-
-
- //Set ADAS parameter
-    {
-        UINT32 bLDWS_En = LDWS_EN_OFF;
-        UINT32 bFCWS_En = FCWS_EN_OFF;
-        UINT32 bSAG_En  = SAG_EN_OFF;
-        UINT32 uiAdasFlag = 0;
-        
-        if ( AHC_Menu_SettingGetCB( (char *)COMMON_KEY_LDWS_EN, &bLDWS_En ) == AHC_TRUE ) {
-            if (bLDWS_En == LDWS_EN_ON ) {
-                uiAdasFlag |= AHC_ADAS_ENABLED_LDWS;
-            }
-        }
-
-        if ( AHC_Menu_SettingGetCB( (char *)COMMON_KEY_FCWS_EN, &bFCWS_En ) == AHC_TRUE ) {
-            if (bFCWS_En == FCWS_EN_ON ) {
-                uiAdasFlag |= AHC_ADAS_ENABLED_FCWS;
-            }
-        }
-
-        if ( AHC_Menu_SettingGetCB( (char *)COMMON_KEY_SAG_EN, &bSAG_En ) == AHC_TRUE ) {
-            if (bSAG_En == SAG_EN_ON ) {
-                uiAdasFlag |= AHC_ADAS_ENABLED_SAG;
-            }
-        }
-        
-        AHC_SetParam( PARAM_ID_ADAS, uiAdasFlag );
-    }
-
-
+	
+typedef union _ApkWDogCtl_U
+{
+	MMP_ULONG		uData;
+	ApkWDogCtl_T	tFlag;
+}ApkWDogCtl_U, *PApkWDogCtl_U;	
+	
+	
+	
+	
 
 m_StateOP
 m_PBStateOP
 
 m_OSD[id]->gui.gui_pfont
 
+
+OSD_ShowString
+	设置背景颜色
+	填充显示string的长方形作为背景，如果之前设置的背景颜色是透明的话就不填充了
+	设置将要显示的string颜色
+	然后就在给定的rect框里面显示string
+	（这里的填充的背景框的大小等于要显示的string的框的大小）
+	AHC_OSDDrawTextInRect这个函数用来显示string
+		它里面会先判断gui是否初始化过，假如没初始化过就会返回错误
+		然后它会调用 BEGIN_GUI_DRAW函数去获取信号量并上锁
+		然后会通过设置string 的旋转度和翻转度
+		然后调用GUIDisplayInRect函数去显示string
+		最后释放信号量解锁gui
+
+
+
+	VideoTimer_ISR
+		首先获取当前的时间，然后将一个存储秒的变量与当前的获取的描述进行对比，如果相等则不更新时间，如果不相等就把当前的秒数给到这个变量
+			然后通过 这个函数  MMPF_OS_SetFlags(CDV_UI_Flag, CDV_TIME_FLAG, MMPF_OS_FLAG_SET); 设置标志位 从而实现每秒钟进行时间更新
+		
+		
+		
+	menuconfig_SDK.handle
+	
+	LANGUAGE_SETTING	
+		
+	ParseMenuSet	
+		
+		
+	AHC_OSDInit	
+		
+	InitOSD_LCD	在模式被选中时的init里面会有
+		
+		
+	AHC_OSDSetCurrentDisplay	
+		
+		
+		
+	总的过程是
+			StateVideoRecInitLCD
+				AHC_SwitchDisplayOutputDevLCD
+					InitOSD_LCD
+						AHC_OSDInit
+	
+
+VideoTimer_ISR
+		每秒钟设置一次 TIME_FLAG
+		如果使能了疲劳驾驶警告，会进去判断时间是否足够，然后设置疲劳驾驶标志位
+		
+	
+		820 ~ 831  判断GPS或者Gsensor是否使能并连接
+					，如果是的话，发送全局消息，让UI去处理GPSGSensor更新  这个消息
+					如果是SD卡插入的话，ulCounterForGpsGsnrUpdate = 0;这个变量在videorecord模式的GPS事件处理函数中会被调用
+
+
+
+
+DrawStateVideoRecInit
+
+		Ovl   bID0 16  
+		LastOvl  bID1 17
+		将 bID0 这一层设置成透明黑色
+		设置bID0层即16层的阿尔法混合 为false
+		
+在AHC_Main_Task里面
+	AHC_OS_SetFlags(UartCtrlFlag, GPS_FLAG_INITIAL, AHC_OS_FLAG_SET);
+这个UartCtrlFlag是一个32位的标志，像GPS_FLAG_INITIAL这样的是其中的一个bit位
+
+main and overlayer
+主要和覆盖的
+
+OSDDraw_ClearMainDrawBufferAll
+这个函数是将 MAIN_DISPLAY_BUFFER 设置为透明黑色，然后将它的数据DMA到MAIN_BUFFER_INDEX和MAIN_BUFFER_INDEX1上面
+OSDDraw_ClearOvlDrawOvlBufferAll
+这个函数是将 OVL_DISPLAY_BUFFER  设置为透明黑色，然后将它的数据DMA到OVL_BUFFER_INDEX 和OVL_BUFFER_INDEX1上面
+
+DrawVideo_TimeStamp 看这个函数
+
+
+
+SwitchUIDrawSetVideoRecordMode函数里面的 m_UIDrawSet = (UI_DARW_SET *)m_VideoDraw_Lcd;  
+m_VideoDraw_Lcd  这个里面存了很多该状态下对应的菜单图标图片显示操作和参数
+
+	
+将这个316d_32_128_msw.bin  改名为 RTK
+将这个   mercury5_ipl.bin  改名为 IPL
+
+
+static MMP_I2CM_ATTR gI2cmAttribute_AS3607 = {MMP_I2CM_GPIO, I2C_AFE_SLAVE_ADDR, 8, 8, 0x2, MMP_FALSE, MMP_FALSE, MMP_FALSE, MMP_FALSE, 0, 0, 0, 200000/*SW support max 200KHZ*/, MMP_TRUE, MMP_GPIO29, MMP_GPIO30, MMP_FALSE, MMP_FALSE};
+
+MSTAR 修改菜单条的颜色
+在MenuDrawingFunc.c里面的MenuDrawItemEx里面的barID 
+
+OSD_ShowStringPool函数在MenuDrawItem函数里面用于显示菜单的选项字符串
+MenuDrawMainPageR2L函数用于获取当前菜单的当前页数和总的页数，并显示在菜单的右上角
+MenuDrawMainPageR1函数用于显示当前菜单的菜单头，即菜单总的属性，如菜单、文件播放此类
+并且还可以显示电池、SD卡的状态等等
+MenuDrawItemEx函数就是首先获取了当前菜单所选定的菜单选项
+然后根据选定的菜单选项的所在菜单页对该页的所有选项逐一显示，
+根据是否是所选定的菜单项显示特殊的菜单条的颜色，然后再显示菜单选项字符串
+
+MenuDrawMainPageEx这个函数先清屏，然后将屏幕设置为全白，最后执行上面的三个函数进行菜单界面的初始化
+
+MenuDrawMainPage这个函数包含上面这个  MenuDrawMainPageEx  函数
+
+当事件是 MENU_OK时，会调用 CommonMenuOK  函数进行处理
+CommonMenuOK函数会判断当前选中的菜单选项的子菜单是不是为空
+如果不为空的话就将当前菜单选项的子菜单的父菜单设置为当前菜单
+然后调用SetCurrentMenu函数将当前菜单设置为 pSubMenu菜单
+然后调用子菜单的pfEventHandler( pSubMenu, MENU_INIT, 0 );进行菜单初始化
+
+但当所选中的菜单选项没有子菜单时，就会判断
+pCurItem->pfItemSelect != NULL 
+它的项目选中的函数处理指针是不是为空，假如不为空
+进行下面的操作
+pCurItem->pfItemSelect( pCurItem, bHover );
+Menu_WriteSetting();
+	这个函数会先获取之前设置的菜单属性，然后通过
+	Menu_Setting_CheckMenuAtoms函数中的memcmp判断
+	当前的菜单选项属性和之前备份的菜单选项属性是否相同
+	如果相同，则返回true，不再执行菜单更新和写入sd卡等操作
+
+	如果不相等，则表示当前的菜单选项的属性有修改，和之前的不一样
+	这是就要调用
+	Menu_WriteLcdSnrTVHdmiStauts2SF();
+    Menu_Setting_BackupMenuAtoms();
+	AHC_PARAM_Menu_WriteEx((char*)txtSetFile);
+	
+Menu_WriteLcdSnrTVHdmiStauts2SF
+这个函数就打印了一些SD的相关东西
+Menu_Setting_BackupMenuAtoms
+这个函数就进行了一些简单操作，menu——info或者menu_atoms的备份	
+AHC_PARAM_Menu_WriteEx
+这个函数调用了	ExportMenuAtom函数将MenuAtoms导入到 text文件，
+即我们的"SF:2:\\useset.txt"
+	
+	
+	
+	
+StateVideoRecModeHandler函数会将传入的事件和参数进行转换	
+然后通过StateModeDoHandlerEvent函数进行处理，这个函数里面会选择当初初始化这个模式时注册的事件对应函数去处理
+
+	
+	
+	
+	
+	
+	ahc_menu.c   1157行
+	
+	
+	
+	AHLM_UI_NOTIFICATION, BUTTON_SUB_MODE_ENTER, (UINT32)mState);
+    if(ahcRet != AHC_TRUE){ AHC_PRINT_RET_ERROR(0,ahcRet); /*return ahcRet;*/} 
+	
+	
+	
+	VideoFunc_Preview
+	
+	
+	
+	StateSwitchMode(UI_VIDEO_STATE);
+	判断传入的状态是否合法，并判断传入的状态是否和当前的状态相同，相同就返回，不再切换
+	接着调用  StateSelectFunc(mState) 函数
+	
+			SwitchDrawOSDIDFunc函数
+				gpMenuDrawOSDID = gMenuDrawOSDID_LCD;
+				gpOvlDrawOSDID = gOvlDrawOSDID_LCD;
+	
+			然后通过通过switch切换进UI_VIDEO_STATE状态
+			接着调用 StateSelectFuncVideoRecordMode 函数
+					这个函数调用 uiSaveCurrentState 将当前的状态设置为上一个状态
+					然后调用RegisterEventCb 函数 将事件对应的处理函数进行绑定
+					然后 调用StateModeSetOperation这个函数进行初始化、结束、中断函数指针设置
+					StateModeSetOperation(UI_VIDEO_STATE, StateVideoRecModeInitLCD, StateVideoRecModeShutDown, StateVideoRecModeHandler);
+					接着调用SwitchUIDrawSetVideoRecordMode函数
+					这个函数 执行了这一句  m_UIDrawSet = (UI_DARW_SET *)m_VideoDraw_Lcd;
+	
+	接着调用 还没切换之前的 StateModeDoShutdown 函数		
+	然后判断还没切换之前的 父状态是否是 no surppot，如果不是no surport就会调用其父状态的 StateModeDoShutdown 函数
+	uiSysState.LastState = uiSysState.CurrentState;
+    uiSysState.CurrentState = mState;
+	然后执行上面这两个语句将 系统的当前状态进行修改设置。
+	最后调用 StateModeDoInit(uiSysState.CurrentState);  函数将切换之后的当前状态进行模式初始化函数的调用
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
