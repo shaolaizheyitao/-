@@ -244,7 +244,7 @@ StateVideoRecModeHandler函数会将传入的事件和参数进行转换
 	
 	
 	
-	VideoFunc_Preview
+	
 	
 	
 	
@@ -271,6 +271,100 @@ StateVideoRecModeHandler函数会将传入的事件和参数进行转换
     uiSysState.CurrentState = mState;
 	然后执行上面这两个语句将 系统的当前状态进行修改设置。
 	最后调用 StateModeDoInit(uiSysState.CurrentState);  函数将切换之后的当前状态进行模式初始化函数的调用
+	
+	
+	
+	StateVideoRecModeInitLCD
+		首先调用  AHC_SwitchDisplayOutputDevLCD  函数
+					这个函数获取当前系统的硬件LCD显示设备，然后经过判断之后
+					执行这一句  AHC_SetCurrentDisplayEx(MMP_DISPLAY_SEL_MAIN_LCD);
+						将  gsAhcCurrentDisplay = kind;
+		经过判断  通过 MMPS_ADAS_RegisterCallBack(LDWS_Callback);  注册LDWS_Callback回调函数
+	    接着  使能 HDMI的一个GPIO口   MMPC_HDMI_PC_Enable(MMP_TRUE);
+		接着调用 SetCurrentOpMode(VIDEOREC_MODE);  将	uiOpMode = VIDEOREC_MODE
+		最后调用 VideoRecMode_Start(); 开启录像
+				里面调用了 VideoFunc_Preview();函数
+				接着调用VideoTimer_Start(VIDEO_TIMER_UNIT);  函数，，其中VIDEO_TIMER_UNIT等于100ms
+					这个函数调用AHC_OS_StartTimer( ulTime, AHC_OS_TMR_OPT_PERIODIC, VideoTimer_ISR, (void*)NULL );
+					设置了定时器自动重加载，还注册了    VideoTimer_ISR  函数，每当定时时间到了之后，就会调用这个函数去执行
+					通过调用获取RTC的实时时钟，如果获取到的秒数和之前的不一样，就会像系统发出消息，用于更新系统或者录像的时间
+		最后调用了 DrawStateVideoRecUpdate(EVENT_LCD_COVER_NORMAL);
+				里面调用了  DrawStateVideoRecInit 函数
+						它里面在 for循环里面通过遍历  VIDEO_GUI_BLOCK这个枚举类型
+						在其 等于 VIDEO_GUI_REC_STATE  时，执行这一个函数  UpdateVideoRecordStatus(VIDEO_REC_STOP);，它将		ubVRStatus =  VIDEO_REC_STOP
+						其余的通过 UIDrawEx(bID0, idx, AHC_FALSE, AHC_TRUE, OSD_COLOR_TRANSPARENT, NULL_PARAM)这一个函数
+						将 m_Video_Draw_Lcd 结构体里面的元素中 其m_Enable为TRUE的 调用其自己的 m_Draw_Func函数进行显示
+						其中又排除了 VIDEO_GUI_REC_POINT   	 VIDEO_GUI_GPS_STATE 这两个元素，即不对其进行显示
+						
+					这里我们先来看看到底它画了哪几个东西	
+						首先是 DrawVideoCaptureStatus 函数 ，由于  ubVRStatus 在之前被我们设置为 VIDEO_REC_STOP，所以在这个函数里面经过判断 ubVRStatus变量之后不执行任何操作
+						接下来是DrawVideoAvailableRecordTime函数，经过判断也不执行
+						再接下来是 DrawVideoCurrentRecordTime函数   这个函数通过 这两个语句
+							AHC_VIDEO_GetCurRecordingTime(&ulTime); 
+							ulTime += VideoFunc_GetRecordTimeOffset();
+							去修改 ulTime 这个变量的值，用于修改屏幕显示REC的起始时间
+							最后是调用则两句
+							l = sprintf(sztime, "%02d:%02d		",TIME_MIN(ulTime), TIME_SEC(ulTime));
+							AHC_OSDDrawText(ubID, (UINT8*)sztime, leftpos ,y, l);
+							去显示屏幕左上角 REC的 时间 00:00
+						接下来是 OSDDraw_CurrentRTCTime函数
+							里面通过AHC_RTC_GetTime函数获取RTC时间，然后将屏幕的显示设置为白色，
+							然后调用 APK_video_OSDDraw_DateTime函数 将当前的时间画在屏幕上
+						接下来是 DrawVideoLockFileStatus 函数  这个函数啥事没干
+						接下来是 DrawVideoLockFileNum    函数  啥事没干
+						再接下来是 DrawVideoMuteRecord	 函数  
+							这个函数里面通过一系列的判断之后 直接是调用了AHC_OSDDrawBitmap(ubID,  &NorMuteIconID, leftpos, toppos);
+							这一句语句去在屏幕上显示 麦克风 这个图标
+						再接下来是 DrawVideoTimeLapse    函数 应该是设置间隔拍摄的，由于里面有个宏被定义为 0 ，所以里面什么都没有执行
+						再接下来是 OSDDrawSetting_DriverId这个函数，里面也是有个宏被定义为 0 ，所以里面什么都没有执行
+						接下来是 DrawVideoKeyState       函数  ，好像函数后面经过一些列判断之后没有显示
+						再者是DrawVideoGPSStarAndSpeed这个函数，用于显示GPS字样，但是在这里好像没有显示
+						
+						
+
+						
+							
+						
+	VideoFunc_Preview函数
+	    里面调用了
+		ahc_ret = VideoFunc_SetPreviewWindow(AHC_TRUE);  //设置窗口大小什么的
+		hc_ret = VideoFunc_SetAttribute();				//设置sensor属性
+		
+		ahcRet = AHC_VIDEO_SetRecordModeRegisterInit((void *)AHC_VIDEO_SetRecordModeInit);
+        ahcRet = AHC_VIDEO_SetRecordModeRegisterUnInit((void *)AHC_VIDEO_SetRecordModeUnInit);
+		
+		AHC_VIDEO_SetNightMode(ulNightMode, 4);
+	
+		ahc_ret = AHC_SetMode(AHC_MODE_RECORD_PREVIEW);
+
+		ahc_ret = VideoFunc_SetPreviewWindow(AHC_FALSE);
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+dec_key.c   
+		
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	
