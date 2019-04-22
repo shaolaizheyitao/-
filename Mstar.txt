@@ -355,20 +355,39 @@ StateVideoRecModeHandler函数会将传入的事件和参数进行转换
 	
 	
 	
-dec_key.c   
-		
+dsc_key.c   
+			RealIDUIKeyTask   函数
+				首先调用 AHC_WaitForBootComplete 函数等待 系统boot完成
+				接着调用 Device_Detection 函数，
+					这个函数先检测 gAHC_InitialDone 这个宏是否为 false 用来判断是否初始化过，如果初始化过就会直接返回，而不执行其他操作
+					如果  sDeviceStatus[i].piopin 为 MMP_GPIO_MAX 的时候，无论如何都不会执行此次for循环中的操作，而是continue，继续检测下一个piopin
+					否则获取当前检测的这个设备的 IO口的值，应该是高低电平，然后与上一次按下时的值做对比。
+						,如果相等,则将当前系统的时间给到KeyLastValue，应该说是更新，
+					如果高低电平不一致，那么就会判断上一次电平与这一次的电平的时间间隔是否大于去抖动的时间，如果小于去抖动的时间就代表是误差，所以，将 当前系统的时间 ulNow赋值给 sDeviceStatus[i].ulKeyLastTime
+					如果检测到的值是sDeviceStatus[i].ulpressLevel即用户自定义该引脚按下的电平
+					则对sDeviceStatus[i].iPressId进行switch选择，判断是哪个设备的检测引脚被按下，然后进行处理
+					随后打印该设备被插上
+					否则如果不是按下那就是被拔掉，然后通过switch语句根据sDeviceStatus[i].iReleaseId判断是哪个设备被拔掉，然后进行处理
+					
+				接下来直接进入while（1）循环
+					首先是对count 加 1，然后对 uCountForGPSTask 进行 + 1，并且判断是否能被5整除
+						如果能被整除的话就 执行这一句  MMPF_OS_SetFlags(UartCtrlFlag, GPS_FLAG_GETGPSPACK, MMPF_OS_FLAG_SET);
+					接着判断 gbBlockRealIDUIKeyTask	是否等于 AHC_FALSE  
+					是的话就通过switch语句  对count变量进行判断
+					当count是1 的时候  执行这些事件检测 GPIO_Key_Detection();IR_Key_Detection();PollingComboKey();PMUIRQDetection();
+					当count是2 的时候  执行这些事件检测 Device_Detection();AHC_Gsensor_Polling(MOVE_BY_ACCELERATION);
+					当count是3 的时候  执行这些事件检测 AHC_Gsensor_Polling(Z_AXIS_GRAVITY_CAHNGE);
+					当count是4 的时候  执行这些事件检测	ADC_AUX1_Detection();ADC_BatteryTemperature_Detection();AutoPlaybackDetection();
+					当count是5 的时候  执行这些事件检测	TV_Cable_Detection();
+														MMPF_OS_GetTime(&curtick);
+														PowerSavingModeDetection(curtick);
+														LCDPowerSaveDetection(curtick);
+														VideoPowerOnOffDetection(curtick);
+														PowerKeyPowerOffDetection(curtick);
+														apk_video_standby_detection(curtick);
+														SpeakerPowerDetection();
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+					判断完之后就  MMPF_OS_Sleep_MS(10);休息10ms
 	
 	
 	
