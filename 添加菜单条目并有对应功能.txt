@@ -1,0 +1,91 @@
+////////////////////2019.5.6@cxl/////////////
+#if (MENU_GENERAL_GYRO_EN)
+
+sMenuListTimeZone
+
+
+
+
+总结  ：
+		第一个是 图标 
+		#define BMICON_MENU_GYRO             bmIcon_Dummy
+		第二个是 子菜单的声明
+		#if (MENU_GENERAL_GYRO_EN)
+			MENUID_SUB_MENU_GYRO_INFO,
+		#endif
+		第三个是定义一个 宏 用于控制这个菜单选项
+		#define MENU_GENERAL_GYRO_EN		(1)
+		第四个是声明一个 函数 用于执行当 子菜单的选项被选中时 执行的函数
+		AHC_BOOL MenuItemGyroInfo(PSMENUITEM pItem, AHC_BOOL bIsHover);
+		第五个是声明 一个子菜单 的结构体 
+		SMENUSTRUCT sSubGyroInfo;
+		第六个是定义并注册我们要显示的菜单条目的相关信息
+		#if (MENU_GENERAL_GYRO_EN)
+			SMENUITEM sItemGYROStatusInfo  = { ITEMID_GYRO_INFO, 		 &BMICON_MENU_GYRO, 	    IDS_GYRO_INFO_EN,	&sSubGyroInfo, 	0, 		0, AHC_TRUE, NULL };
+			SMENUITEM sItemGYROINFO_ON	   = { ITEMID_GYRO_INFO_ON, 	 &BMICON_OPTION_OPEN, 		IDS_GYRO_INFO_ON,	 NULL, MenuItemGyroInfo, 0, AHC_TRUE, NULL };
+			SMENUITEM sItemGYROINFO_OFF	   = { ITEMID_GYRO_INFO_OFF, 	 &BMICON_OPTION_CLOSE, 		IDS_GYRO_INFO_OFF,	 NULL, MenuItemGyroInfo, 0, AHC_TRUE, NULL };
+		#endif
+		第七个是菜单条目包含的子菜单的一个定义声明
+		#if (MENU_GENERAL_GYRO_EN)
+			PSMENUITEM   sMenuListGyroInfo[] =
+			{
+				&sItemGYROINFO_ON,
+				&sItemGYROINFO_OFF
+			};
+		#endif
+		第八个是定义 第五中声明的那个子菜单结构体
+		#if (MENU_GENERAL_GYRO_EN)
+			SMENUSTRUCT sSubGyroInfo =
+			{
+				MENUID_SUB_MENU_GYRO_INFO,
+				NULL,
+				IDS_GYRO_INFO_EN,
+				NULL,
+				sizeof(sMenuListGyroInfo)/sizeof(PSMENUITEM),
+				sMenuListGyroInfo,
+				SubMenuEventHandler,
+				MenuGetDefault_GeneralSetting,
+				0,
+				IDS_GYRO_INFO_EN,
+				AHC_FALSE,
+				0
+			};
+		#endif
+		第九个是定义 第四中声明的那个函数
+		#if (MENU_GENERAL_GYRO_EN)
+			AHC_BOOL MenuItemGyroInfo(PSMENUITEM pItem, AHC_BOOL bIsHover)
+			{
+				if( ! (pItem->iItemId - ITEMID_GYRO_INFO - 1) )
+					printc(FG_YELLOW("%s,%d,GYRO ON\n"),__func__,__LINE__);	
+				else
+					printc(FG_YELLOW("%s,%d,GYRO OFF\n"),__func__,__LINE__);	
+				return AHC_TRUE;
+			}
+		#endif
+		第十个是在 MenuGetDefault_GeneralSetting  函数中添加对 我们添加的菜单选项的相应语句操作
+		#if (MENU_GENERAL_GYRO_EN)
+		 case MENUID_SUB_MENU_GYRO_INFO:
+		 		 	
+				///DefaultValue = MenuSettingConfig()->uiTimeZone;
+			DefaultValue = 0;			 
+            break;
+		#endif
+		第十一个是在 GENERALSETTINGITEMID 中 添加注册 ITEMID
+		#if (MENU_GENERAL_GYRO_EN)
+			ITEMID_GYRO_INFO,			
+			ITEMID_GYRO_INFO_ON,	
+			ITEMID_GYRO_INFO_OFF,
+		#endif
+		第十二个是在 MenuStateMovieMenu.c中  添加一句外部定义的声明
+		#if (MENU_GENERAL_GYRO_EN)
+			extern SMENUITEM sItemGYROStatusInfo;
+		#endif
+		第十三个是比较重要的，那就是在当前模式我们的菜单中添加一项菜单条目，他在MenuStateMovieMenu.c 中的sMenuListMainVideo
+		#if (MENU_GENERAL_GYRO_EN)
+			&sItemGYROStatusInfo,
+		#endif
+		第十四个也是比较关键的，那就是显示该菜单条目字符串位于OSDStringPool文件夹中的具体位置
+		IDS_GYRO_INFO_EN,                      
+		IDS_GYRO_INFO_ON,
+		IDS_GYRO_INFO_OFF,
+	    那么我们相应的也得在EnglishOSDStringPool.c中添加我们的字符串的数组形式
